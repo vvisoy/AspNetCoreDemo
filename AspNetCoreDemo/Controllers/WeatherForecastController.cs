@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Net.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -15,13 +15,17 @@ namespace AspNetCoreDemo.Controllers {
         };
 
       private readonly ILogger<WeatherForecastController> _logger;
+      private readonly IHttpClientFactory _clientFactory;
 
-      public WeatherForecastController(ILogger<WeatherForecastController> logger) {
+      public WeatherForecastController(ILogger<WeatherForecastController> logger, IHttpClientFactory clientFactory) {
          _logger = logger;
+         _clientFactory = clientFactory;
       }
 
       [HttpGet]
       public IEnumerable<WeatherForecast> Get() {
+         var client = _clientFactory.CreateClient("github");
+
          var rng = new Random();
          return Enumerable.Range(1, 5).Select(index => new WeatherForecast {
             Date = DateTime.Now.AddDays(index),

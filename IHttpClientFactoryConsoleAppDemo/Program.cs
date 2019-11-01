@@ -7,29 +7,31 @@ using System.Threading.Tasks;
 
 namespace IHttpClientFactoryConsoleAppDemo {
    class Program {
-      //static async Task<int> Main(string[] args) {
-      //   var builder = new HostBuilder()
-      //      .ConfigureServices((hostContext, services) => {
-      //      })
-      //      .UseConsoleLifetime();
+      static async Task<int> Main(string[] args) {
+         var builder = new HostBuilder()
+            .ConfigureServices((hostContext, services) => {
+               services.AddHttpClient();
+               services.AddTransient<IMyService, MyService>();
+            })
+            .UseConsoleLifetime();
 
-      //   var host = builder.Build();
+         var host = builder.Build();
 
-      //   {
-      //      var services = serviceScope.ServiceProvider;
-      //      try {
-      //         var myService = services.GetRequiredService<IMyService>();
-      //         var pageContent = await myService.GetPage();
+         using (var serviceScope = host.Services.CreateScope()) {
+            var services = serviceScope.ServiceProvider;
+            try {
+               var myService = services.GetRequiredService<IMyService>();
+               var pageContent = await myService.GetPage();
 
-      //         Console.WriteLine(pageContent.Substring(0, 500));
-      //      } catch (Exception ex) {
-      //         var logger = services.GetRequiredService<ILogger<Program>>();
-      //         logger.LogError(ex, "An error occurred.");
-      //      }
-      //   }
+               Console.WriteLine(pageContent.Substring(0, 500));
+            } catch (Exception ex) {
+               var logger = services.GetRequiredService<ILogger<Program>>();
+               logger.LogError(ex, "An error occurred.");
+            }
+         }
 
-      //   return 0;
-      //}
+         return 0;
+      }
    }
 
    public interface IMyService {

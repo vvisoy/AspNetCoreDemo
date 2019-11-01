@@ -5,6 +5,7 @@ using AspNetCoreDemo.Interfaces;
 using AspNetCoreDemo.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -21,6 +22,8 @@ namespace AspNetCoreDemo {
       // This method gets called by the runtime. Use this method to add services to the container.
       public void ConfigureServices(IServiceCollection services) {
          services.AddControllers();
+
+         #region Making HTTP requests
 
          //Basic usage
          services.AddHttpClient();
@@ -113,19 +116,104 @@ namespace AspNetCoreDemo {
                   UseDefaultCredentials = true
                };
             });
+
+         #endregion
+      }
+
+      private static void HandleMapTest1(IApplicationBuilder app) {
+         app.Run(async context => {
+            await context.Response.WriteAsync("Map Test 1");
+         });
+      }
+
+      private static void HandleMapTest2(IApplicationBuilder app) {
+         app.Run(async context => {
+            await context.Response.WriteAsync("Map Test 2");
+         });
+      }
+
+      private static void HandleBranch(IApplicationBuilder app) {
+         app.Run(async context => {
+            var branchVer = context.Request.Query["branch"];
+            await context.Response.WriteAsync($"Branch used = {branchVer}");
+         });
+      }
+
+      private static void HandleMultipleSeg(IApplicationBuilder app) {
+         app.Run(async context => {
+            await context.Response.WriteAsync("Map multiple segments.");
+         });
       }
 
       // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
       public void Configure(IApplicationBuilder app, IWebHostEnvironment env) {
+         #region ASP.NET Core Middleware
+
+         // Create a middleware pipeline with IApplicationBuilder
+         //app.Run(async context => {
+         //   await context.Response.WriteAsync("Hello, World!");
+         //});
+
+         // Chaining multiple request delegates together
+         app.Use(async (context, next) => {
+            // Do work that doesn't write to the Response.
+            await next.Invoke();
+            // Do logging or other work that doesn't write to the Response.
+         });
+
+         //app.Run(async context => {
+         //   await context.Response.WriteAsync("Hello from 2nd delegate.");
+         //});
+
+         #endregion
+
          if (env.IsDevelopment()) {
             app.UseDeveloperExceptionPage();
+            app.UseDatabaseErrorPage();
+         } else {
+            app.UseExceptionHandler("/Error");
+            app.UseHsts();
          }
 
          app.UseHttpsRedirection();
+         app.UseStaticFiles();
+
+         //app.UseResponseCompression();
+
+         app.UseCookiePolicy();
 
          app.UseRouting();
+         app.UseAuthentication();
 
          app.UseAuthorization();
+         //app.UseSession();
+
+         //app.UseEndpoints(endpoints => {
+         //   endpoints.MapRazorPages();
+         //});
+
+         // Use, Run, and Map         
+         app.MapWhen(context => context.Request.Query.ContainsKey("branch"), HandleBranch);
+
+         // Map nesting
+         app.Map("/level1", levelApp1 => {
+            levelApp1.Map("/level2a", level2AApp => {
+               // "/level1/level2a" processing
+            });
+            levelApp1.Map("/level2b", level2BApp => {
+               // "/level1/level2b" processing
+            });
+         });
+
+         // Multiple segments
+         app.Map("/map1/seg1", HandleMultipleSeg);
+
+         app.Map("/map1", HandleMapTest1);
+         app.Map("/map2", HandleMapTest2);
+
+         app.Run(async context => {
+            await context.Response.WriteAsync("Hello from non-Map delegate. <p>");
+         });
 
          app.UseEndpoints(endpoints => {
             endpoints.MapControllers();
